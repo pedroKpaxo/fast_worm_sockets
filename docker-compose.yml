@@ -1,7 +1,6 @@
 version: '3.8'
 services:
-
-  # Application
+  # Application service
   web:
     build:
       context: .
@@ -14,13 +13,34 @@ services:
     volumes:
       - .:/app
       - ./data:/data
+    depends_on:
+      - mongodb
     env_file: .env
     restart: always
+    entrypoint: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - app-network
-    working_dir: /app # Set the working directory
-    entrypoint: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:latest
+    env_file: .env
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+      - ./db_confs/mongod.conf:/etc/mongo/mongod.conf
+    command: [ "mongod", "--config", "/etc/mongo/mongod.conf" ]
+    networks:
+      - app-network
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
