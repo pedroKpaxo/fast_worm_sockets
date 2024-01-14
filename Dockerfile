@@ -19,10 +19,12 @@ RUN pip install --upgrade pip && pip install -r /app/requirements/production.txt
 # Copy the application source code to the container
 COPY . /app
 
+# IMPORTANT
+# This is the port that FastAPI will be listening on inside the container
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-# Health check to ensure the server is running (adjust the check command as per your application)
+
+# Healthcheck to monitor the application
 HEALTHCHECK CMD ["curl", "--fail", "http://localhost:8000", "||", "exit 1"]
 
-# Expose the port your app runs on
-
+# Command to run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
