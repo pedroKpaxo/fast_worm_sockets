@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+
+  # Application
+  web:
+    build:
+      context: .
+      args:
+        requirements_file: requirements/local.txt
+    stdin_open: true
+    tty: true
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./data:/data
+    env_file: .env
+    restart: always
+    networks:
+      - app-network
+    working_dir: /app # Set the working directory
+    entrypoint: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+networks:
+  app-network:
+    driver: bridge
