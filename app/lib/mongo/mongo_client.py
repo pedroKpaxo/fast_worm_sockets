@@ -2,7 +2,7 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 
 
-def get_db_handle():
+def get_db_handle() -> AsyncIOMotorClient:
     """
     This function returns a handle to the MongoDB database.
     Make sure to set the environment variables `MONGO_INITDB_ROOT_USERNAME` and

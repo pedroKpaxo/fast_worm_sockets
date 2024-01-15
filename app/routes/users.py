@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
-from lib.mongo.mongo_client import get_db_handle
+from app.lib.mongo.mongo_client import get_db_handle
 
 
 users_router = APIRouter()
