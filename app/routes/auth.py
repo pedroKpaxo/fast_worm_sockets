@@ -31,7 +31,7 @@ class TokenData:
     username: Optional[str] = None
 
 
-def create_access_token(*, data: dict, expires_delta: Optional[timedelta] = None) -> str:  # noqa
+def create_access_token(data: dict) -> str:  # noqa
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=SETTINGS.ACCESS_TOKEN_EXPIRES_IN)  # noqa
     to_encode.update({"exp": expire})

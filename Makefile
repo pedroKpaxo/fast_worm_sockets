@@ -22,3 +22,5 @@ setup_install:
 setup_venv:
 	bash scripts/setup-venv.sh
 
+test:
+	docker-compose run web pytest 

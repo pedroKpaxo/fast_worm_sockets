@@ -1,8 +1,9 @@
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 
 
-def get_db_handle() -> AsyncIOMotorClient:
+def get_db_handle() -> MongoClient:
     """
     This function returns a handle to the MongoDB database.
     Make sure to set the environment variables `MONGO_INITDB_ROOT_USERNAME` and
@@ -12,5 +13,5 @@ def get_db_handle() -> AsyncIOMotorClient:
     # NOTE make sure to set the environment variables
     user = os.environ.get('MONGO_INITDB_ROOT_USERNAME', '')
     password = os.environ.get('MONGO_INITDB_ROOT_PASSWORD', '')
-    client = AsyncIOMotorClient(f'mongodb://{user}:{password}@mongodb:27017')
+    client = AsyncIOMotorClient(f'mongodb://{user}:{password}@mongodb:27017')  # noqa
     return client
