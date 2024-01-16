@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', path='./grx.css') }}">
+</head>
+
+<style>
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: 0;
+    }
+
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    #game {
+        width: 80%;
+        max-width: 600px;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        padding: 20px;
+    }
+
+    .interface {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .players {
+        margin-bottom: 20px;
+    }
+
+    .roulette-board {
+        background: #333;
+        color: #fff;
+        padding: 15px;
+        border-radius: 5px;
+        flex: 1;
+    }
+
+    .numbers h1 {
+        font-size: 2.5em;
+        margin: 0;
+        text-align: center;
+        background: #444;
+        padding: 10px;
+        border-radius: 40%;
+        width: 60px;
+        margin: auto;
+    }
+
+    form#bet {
+        display: flex;
+        margin-top: 15px;
+    }
+
+    form#bet input[type="text"] {
+        flex: 1;
+        padding: 10px;
+        margin-right: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    form#bet button {
+        background: #5cb85c;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    form#bet button:hover {
+        background: #4cae4c;
+    }
+
+    .controls button,
+    .link-button {
+        background: #0275d8;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-block;
+        margin-top: 10px;
+    }
+
+    .controls button:hover,
+    .link-button:hover {
+        background: #025aa5;
+    }
+
+    #joinBtn {
+        display: block;
+        text-align: center;
+    }
+
+    .log {
+        background-color: #f2f2f2;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        max-height: 200px;
+        /* Maximum height when expanded */
+        overflow-y: auto;
+        position: absolute;
+        right: 16px;
+        width: 300px;
+    }
+
+    .log h2 {
+        margin-top: 0;
+        color: #333;
+        font-size: 1.2em;
+    }
+
+    #min-btn {
+        background-color: #e0e0e0;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        float: right;
+        font-size: 0.8em;
+        line-height: 1;
+        padding: 0.2em 0.5em;
+        position: relative;
+        top: -5px;
+    }
+
+    #log {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    #log li {
+        padding: 5px;
+        border-bottom: 1px solid #ddd;
+        font-size: 13px;
+    }
+
+    #log li:last-child {
+        border-bottom: none;
+    }
+
+    /* Adjusted styles for when the log is minimized */
+    .minimized.log {
+        max-height: 40px;
+        /* Adjust to show the header only */
+        overflow: hidden;
+        bottom: 0;
+    }
+
+    .minimized.log ul {
+        display: none;
+    }
+
+    .game-stats {
+        background-color: #f2f2f2;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 20px 0;
+        /* Space between the stats and the rest of the game interface */
+    }
+
+    .game-stats h2 {
+        color: #333;
+        font-size: 1.4em;
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+
+    .game-stats ul {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .game-stats ul li {
+        padding: 5px 0;
+        font-size: 1em;
+        color: #333;
+    }
+
+    .game-stats span {
+        font-weight: bold;
+    }
+</style>
+
+<body>
+
+    <div id="game">
+
+        <div class="interface">
+            <h1 id="me" style="font-weight: 800;">User</h1>
+            <div class="roulette-board">
+
+                <div class="numbers">
+                    <h1 id="bet-number">00</h1>
+                </div>
+                <form id="bet">
+                    <input type="text" name="bet" placeholder="Enter your bet" />
+                    <input type="text" name="number" placeholder="choose a number" />
+                    <button type="submit">Make Bet</button>
+                </form>
+                <div class="controls">
+                </div>
+            </div>
+            <div id="stats" class="game-stats">
+                <h2>Players</h2>
+                <ul id="players-list">
+                </ul>
+            </div>
+            <div class="controls">
+                <a href="" target="_blank" id="joinBtn" class="link-button">Join</a>
+            </div>
+        </div>
+
+
+    </div>
+
+    <div id="history" class="log" aria-label="A place to register the log">
+        <h2>Log <button id="min-btn">-</button></h2>
+        <ul id="log"></ul>
+    </div>
+    <script>
+        var windowPlayer = null;
+
+        const getRandomName = () => {
+            const names = ['John', 'Jane', 'Bob', 'Alice', 'Mark', 'Sara', 'Mike', 'Mary', 'Tom', 'Kate'];
+            return names[Math.floor(Math.random() * names.length)];
+        }
+
+        class Player {
+            constructor(name) {
+                this.name = name;
+                this.balance = 1000;
+            }
+        }
+
+        class GameState {
+            constructor() {
+                this.players = [];
+                this.number = 0;
+            }
+
+            addPlayer(player) {
+                this.players.push(player);
+            }
+
+            removePlayer(player) {
+                this.players = this.players.filter(p => p.name !== player.name);
+            }
+
+            spin() {
+                this.number = Math.floor(Math.random() * 37);
+            }
+        }
+    </script>
+    <script>
+
+        const playerList = document.getElementById('players-list');
+        const betForm = document.getElementById('bet');
+        const joinBtn = document.getElementById('joinBtn');
+        const spinBtn = document.getElementById('spin');
+        const me = document.getElementById('me');
+        const betNumber = document.getElementById('bet-number');
+
+        document.getElementById('min-btn').addEventListener('click', () => {
+            console.log('minimizeLog');
+            document.getElementById('history').classList.toggle('minimized');
+        });
+
+        betForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            makeBet();
+        });
+
+    </script>
+    <script>
+        // Create WebSocket connection.
+        const webSocket = new WebSocket("ws://localhost:8000/game/start/ws");
+        // Check if we have a game id in the url
+        const params = new URLSearchParams(window.location.search);
+        webSocket.onmessage = handleWebSocketMessage;
+
+
+        /**
+         * @param {MessageEvent} event
+         */
+        function handleWebSocketMessage(event) {
+            // Parse the message
+            const data = JSON.parse(event.data);
+            // append to the log
+            const log = document.getElementById('log');
+            const li = document.createElement('li');
+            li.innerText = JSON.stringify(data);
+            log.appendChild(li);
+            playerList.innerHTML = '';
+            data.state?.players?.forEach(player => {
+                const li = document.createElement('li');
+                li.innerText = `${player.name} - ${player.money}`;
+                playerList.appendChild(li);
+            });
+            switch (data.type) {
+                case 'init':
+                    joinBtn.href = "?join=" + data.game
+                    break;
+
+                case 'spin':
+                    document.querySelector('.numbers h1').innerText = data.number;
+                    break;
+
+                case 'error':
+                    alert(data.message);
+                    break;
+            }
+        };
+        webSocket.onopen = () => {
+            // Send a message to start the game
+            // this function is called only once when the WebSocket connection is established
+            const player = new Player(getRandomName());
+            windowPlayer = player;
+            me.innerText = player.name;
+            if (params.has('join')) {
+                console.log('Joining game')
+                webSocket.send(JSON.stringify({ type: 'join', game: params.get('join'), player: player.name }));
+                return;
+            }
+            console.log('Creating game')
+            webSocket.send(JSON.stringify({ type: 'start_game', player: player.name }));
+        }
+
+
+
+        function makeBet() {
+            console.log('Making bet')
+            if (!betForm.bet.value || !betForm.number.value) {
+                alert('Please fill the bet and number fields');
+                return;
+            }
+            webSocket.send(
+                JSON.stringify(
+                    {
+                        type: 'bet',
+                        bet_amount: betForm.bet.value,
+                        bet_number: betForm.number.value,
+                        player_name: windowPlayer.name
+                    }
+                )
+            );
+            betNumber.innerText = betForm.number.value;
+            betForm.reset();
+            betForm.childNodes.forEach(node => {
+                node.disabled = true;
+            });
+        }
+    </script>
+</body>
+
+</html>

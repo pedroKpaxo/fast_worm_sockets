@@ -1,3 +1,5 @@
+from fastapi import Depends, FastAPI, Request
+from typing import Annotated
 from datetime import datetime, timedelta
 from fastapi import APIRouter, status, HTTPException
 from fastapi.responses import JSONResponse
@@ -12,7 +14,6 @@ from app.schemas.user import (
 from app.lib.utils.password import hash_password, check_password
 from fastapi.security import OAuth2PasswordBearer
 import jwt
-from typing import Optional
 
 auth_router = APIRouter()
 ACCESS_TOKEN_EXPIRES_IN = SETTINGS.ACCESS_TOKEN_EXPIRES_IN
@@ -27,10 +28,6 @@ USER_COLLECTION: Collection = db.get_collection('users')
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-class TokenData:
-    username: Optional[str] = None
-
-
 def create_access_token(data: dict) -> str:  # noqa
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=SETTINGS.ACCESS_TOKEN_EXPIRES_IN)  # noqa
@@ -40,25 +37,19 @@ def create_access_token(data: dict) -> str:  # noqa
     return encoded_jwt
 
 
-def verify_token(token: str) -> TokenData:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def verify_token(token: str):
+    """
+    This function takes jwt token, decodes it and return the user data
+    """
     try:
-        payload: dict = jwt.decode(
-            token,
-            SETTINGS.JWT_PUBLIC_KEY,
-            algorithms=[SETTINGS.JWT_ALGORITHM]
-        )
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = TokenData(username=username)
-        return token_data
+        decoded = jwt.decode(token, SETTINGS.JWT_PRIVATE_KEY, algorithms=[SETTINGS.JWT_ALGORITHM])  # noqa
+        return decoded
     except jwt.PyJWTError:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 @auth_router.post('/register', status_code=status.HTTP_201_CREATED, response_model=UserResponse)  # noqa
@@ -112,3 +103,25 @@ async def login(form_data: LoginUserSchema):
         )
     access_token = create_access_token(data={"sub": user.email})
     return JSONResponse(status_code=status.HTTP_200_OK, content={"access_token": access_token, "token_type": "bearer"}, headers={"Authorization": f"Bearer {access_token}"})  # noqa
+
+
+app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    verified = verify_token(token)
+    user = await USER_COLLECTION.find_one({'email': verified['sub']})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+@auth_router.get("/auth/me")
+async def read_users_me(current_user: dict = Depends(get_current_user), request: Request = None):  # noqa
+    return userResponseEntity(current_user)

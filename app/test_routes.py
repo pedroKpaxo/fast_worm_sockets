@@ -52,3 +52,10 @@ def test_login_user(test_client):
     )
     assert response.status_code == 200
     users_collection.find_one_and_delete({'email': 'testuser@test.com'})
+
+
+def test_websocket(test_client):
+
+    with test_client.websocket_connect("/game/start/ws") as websocket:
+        data = websocket.receive_json()
+        assert data.get('action') == 'start'
